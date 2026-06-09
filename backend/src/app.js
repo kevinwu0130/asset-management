@@ -6,7 +6,20 @@ const { errorHandler } = require('./middleware/errorHandler')
 
 const app = express()
 
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }))
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(s => s.trim())
+  : ['http://localhost:5173', 'http://localhost:5174']
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      cb(null, true)
+    } else {
+      cb(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true
+}))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

@@ -1,4 +1,5 @@
-const BASE = '/api'
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+const UPLOADS_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/uploads` : '/uploads'
 
 function getToken() {
   return localStorage.getItem('token')
@@ -48,7 +49,7 @@ export const api = {
     delete: (id) => request('DELETE', `/assets/${id}`),
     exportCsv: () => {
       const token = getToken()
-      window.open(`${BASE}/assets/export/csv?token=${token}`)
+      window.open(`${BASE}/assets/export/csv?token=${token}`, '_blank')
     },
     importCsv: (file) => {
       const form = new FormData()
@@ -117,6 +118,6 @@ export const api = {
       return request('POST', `/attachments/asset/${assetId}`, form, true)
     },
     delete: (id) => request('DELETE', `/attachments/${id}`),
-    url: (filename) => `/uploads/${filename}`
+    url: (filename) => `${UPLOADS_BASE}/${filename}`
   }
 }
