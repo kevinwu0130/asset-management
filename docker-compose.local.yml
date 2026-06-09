@@ -1,0 +1,36 @@
+version: '3.9'
+
+# 本機開發模式：SQLite + hot-reload，無需 PostgreSQL
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_PROVIDER: sqlite
+      DATABASE_URL: file:./dev.db
+      JWT_SECRET: local-dev-secret
+      JWT_EXPIRES_IN: 8h
+      PORT: 3000
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: Admin@1234
+      ADMIN_NAME: 系統管理員
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: >
+      sh -c "npx prisma db push && node prisma/seed.js && node --watch src/app.js"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: builder
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+    environment:
+      VITE_API_URL: http://localhost:3000

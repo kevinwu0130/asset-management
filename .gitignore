@@ -1,0 +1,20 @@
+node_modules/
+.env
+.env.local
+*.db
+*.db-journal
+dist/
+.wrangler/
+backend/prisma/migrations/
+
+# Uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+

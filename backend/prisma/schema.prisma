@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 本機/預設：sqlite。切換 PostgreSQL 時將 provider 改為 "postgresql" 並重新執行 prisma db push
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// Users & Auth
+// ─────────────────────────────────────────
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  // Role: ADMIN | MANAGER | USER
+  role      String   @default("USER")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  custodianAssets      Asset[]              @relation("AssetCustodian")
+  createdAssets        Asset[]              @relation("AssetCreator")
+  assetLogs            AssetLog[]
+  loanRequests         LoanRecord[]         @relation("LoanBorrower")
+  loanApprovals        LoanRecord[]         @relation("LoanApprover")
+  maintenanceCreated   MaintenanceRecord[]
+  attachmentsUploaded  Attachment[]
+}
+
+// ─────────────────────────────────────────
+// Asset Classification
+// ─────────────────────────────────────────
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets Asset[]
+}
+
+model Location {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets Asset[]
+}
+
+// ─────────────────────────────────────────
+// Asset Core
+// ─────────────────────────────────────────
+
+model Asset {
+  id             Int       @id @default(autoincrement())
+  assetTag       String    @unique
+  name           String
+  description    String?
+  categoryId     Int?
+  // Status: IN_STOCK | IN_USE | MAINTENANCE | RETIRED
+  status         String    @default("IN_STOCK")
+  purchaseDate   DateTime?
+  purchaseAmount Float?
+  custodianId    Int?
+  locationId     Int?
+  barcode        String?
+  warrantyExpiry DateTime?
+  notes          String?
+  createdById    Int
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  category           Category?           @relation(fields: [categoryId], references: [id])
+  location           Location?           @relation(fields: [locationId], references: [id])
+  custodian          User?               @relation("AssetCustodian", fields: [custodianId], references: [id])
+  createdBy          User                @relation("AssetCreator", fields: [createdById], references: [id])
+  logs               AssetLog[]
+  loanRecords        LoanRecord[]
+  maintenanceRecords MaintenanceRecord[]
+  attachments        Attachment[]
+}
+
+// ─────────────────────────────────────────
+// Asset Lifecycle Log (auto-recorded)
+// ─────────────────────────────────────────
+
+model AssetLog {
+  id        Int      @id @default(autoincrement())
+  assetId   Int
+  userId    Int
+  // Action: CREATED | UPDATED | STATUS_CHANGED | TRANSFERRED | RETIRED
+  action    String
+  field     String?
+  fromValue String?
+  toValue   String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// Loan / Borrow Management
+// ─────────────────────────────────────────
+
+model LoanRecord {
+  id               Int       @id @default(autoincrement())
+  assetId          Int
+  borrowerId       Int
+  approverId       Int?
+  // Status: PENDING | APPROVED | REJECTED | RETURNED | OVERDUE
+  status           String    @default("PENDING")
+  requestedAt      DateTime  @default(now())
+  approvedAt       DateTime?
+  borrowedAt       DateTime?
+  expectedReturnAt DateTime?
+  returnedAt       DateTime?
+  rejectReason     String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  asset    Asset @relation(fields: [assetId], references: [id])
+  borrower User  @relation("LoanBorrower", fields: [borrowerId], references: [id])
+  approver User? @relation("LoanApprover", fields: [approverId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// Maintenance / Repair Records
+// ─────────────────────────────────────────
+
+model MaintenanceRecord {
+  id               Int       @id @default(autoincrement())
+  assetId          Int
+  // Status: PENDING | IN_REPAIR | COMPLETED | CANCELLED
+  status           String    @default("PENDING")
+  vendor           String?
+  description      String?
+  cost             Float?
+  sentAt           DateTime?
+  expectedReturnAt DateTime?
+  returnedAt       DateTime?
+  createdById      Int
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  asset     Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+}
+
+// ─────────────────────────────────────────
+// File Attachments
+// ─────────────────────────────────────────
+
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  assetId      Int
+  filename     String
+  originalName String
+  mimetype     String
+  size         Int
+  uploadedById Int
+  createdAt    DateTime @default(now())
+
+  asset      Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation(fields: [uploadedById], references: [id])
+}
