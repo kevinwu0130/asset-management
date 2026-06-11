@@ -94,20 +94,23 @@ async function main() {
     { name: '簡報器 Logitech Spotlight', categoryName: '其他', locationName: 'B棟1樓', status: 'AVAILABLE', purchasePrice: 3200 },
   ]
 
+  const admin = await prisma.user.findUnique({ where: { email } })
+
   let count = 0
-  const today = new Date()
+  const baseDate = new Date('2024-01-01')
   for (const a of assets) {
-    const purchaseDate = new Date(today)
-    purchaseDate.setMonth(purchaseDate.getMonth() - Math.floor(Math.random() * 36))
+    const purchaseDate = new Date(baseDate)
+    purchaseDate.setMonth(baseDate.getMonth() + Math.floor(count * 0.7))
     await prisma.asset.create({
       data: {
         name: a.name,
         categoryId: catMap[a.categoryName],
         locationId: locMap[a.locationName],
         status: a.status,
-        purchasePrice: a.purchasePrice,
+        purchaseAmount: a.purchasePrice,
         purchaseDate,
         assetTag: `A${String(count + 1).padStart(4, '0')}`,
+        createdById: admin.id,
       }
     })
     count++
